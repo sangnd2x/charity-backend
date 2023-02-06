@@ -2,6 +2,8 @@ const User = require('../models/user');
 const Role = require('../models/role');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
+// require('dotenv').config();
 
 exports.postAdminSignUp = async (req, res, next) => {
   const { username, password, email } = req.body;
@@ -20,11 +22,47 @@ exports.postAdminSignUp = async (req, res, next) => {
         email: email,
         password: hashedPass,
         role: role.name,
+        status: 'inactive',
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-      const result = await user.save();
-      res.status(200).json({ msg: 'New User Created!', userId: result._id });
+
+      // Send confirmation email after sign up
+      let transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: 'derp12.08@gmail.com',
+          pass: process.env.NODEMAILER_PASSWORD_GMAIL
+        }
+      });
+
+      let mailDetails = {
+        from: 'derp12.08@gmail.com',
+        to: email,
+        subject: 'ACCOUNT REGISTER CONFIRMATION',
+        html: `
+        <h1>Hi ${user.username}</h1>
+        <br>
+        <p>Thank you for creating an account with us.</p>
+        <p>Please verify you email</p>
+        <a href='/gooogle.com'>Click me<a/>
+        <br>
+        <p>Best Regards,</p>
+        <p>The Giving Circle Team</p>
+        `
+      }
+
+      transporter.sendMail(mailDetails, async (err, info) => {
+        if (err) {
+          return console.log(err);
+        } else {
+          console.log('Email sent1');
+          const result = await user.save();
+          if (result) {
+            res.status(200).json({ msg: 'New User Created!' });
+          }
+        }
+      });
     }
   } catch (error) {
     if (!error.statusCode) {

@@ -1,7 +1,6 @@
 const Charity = require('../models/charity');
 const User = require('../models/user');
 const Donation = require('../models/donation');
-const charity = require('../models/charity');
 const cloudinary = require('cloudinary').v2;
 
 cloudinary.config({
@@ -13,6 +12,7 @@ cloudinary.config({
 exports.postNewCharity = async (req, res, next) => {
   const { name, recipient, startDate, endDate, target, status, longDesc, shortDesc } = req.body;
   const images = req.files;
+  // console.log(images);
   
   try {
     // upload images to 
@@ -21,6 +21,7 @@ exports.postNewCharity = async (req, res, next) => {
       const result = await cloudinary.uploader.upload(image.path);
       imgPaths.push(result.secure_url);
     }
+    console.log('imgPaths', imgPaths);
     // save new charity to db
     const charity = new Charity({
       name: name,
@@ -51,9 +52,22 @@ exports.postNewCharity = async (req, res, next) => {
 exports.adminFetchCharities = async (req, res, next) => {
   try {
     const response = await Charity.find();
-    // console.log(response);
-    const results = response.filter(res => res.status !== 'stopped');
-    res.status(200).send(results);
+    const donations = await Donation.find();
+    // const results = response.filter(res => res.status !== 'stopped');
+    const donated = response.map((charity) => {
+      const donated = []
+      donations.map(donation => {
+        if (donation.charity.charityName === charity.name) {
+          donated.push(+donation.amount);
+        }
+      });
+      return {
+        charityName: charity.name,
+        donated: donated.reduce((a, b) => a + b, 0),
+        progress: donated.reduce((a, b) => a + b, 0)/charity.target * 100
+      }
+    });
+    res.status(200).json({charities: response, donated: donated});
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
