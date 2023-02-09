@@ -25,7 +25,10 @@ router.get('/edit-charity/:charityId', jwtAuth, adminController.adminGetEditChar
 router.post('/edit-charity', jwtAuth, adminController.adminPostEditCharity);
 
 // GET admin delete charity
-router.get('/delete-charity/:charityId', jwtAuth, adminController.adminDeleteCharity);
+router.post('/delete-charity', jwtAuth, adminController.adminDeleteCharity);
+
+// GET admin deactivate user
+router.get('/user/deactivate/:userId', jwtAuth, adminController.adminDeactivateUser);
 
 // GET  admin fetch users
 router.get('/users', jwtAuth, adminController.adminFetchUsers);
@@ -41,5 +44,17 @@ router.get('/search/donation/:donorName', jwtAuth, adminController.adminFetchSea
 
 // GET admin fetch searched user
 router.get('/search/user/:username', jwtAuth, adminController.adminFetchSearchedUser);
+
+// POST admin forget password
+router.post('/user/forget-password', adminController.adminForgetPassword);
+
+// POST admin reset password
+router.post('/user/reset-password', adminController.adminResetPassword);
+
+// GET admin fetch user
+router.get('/users/:userId', jwtAuth, adminController.adminFetchUser);
+
+// POST admin edit info
+router.post('/user/edit-info', jwtAuth, adminController.adminEditInfo);
 
 module.exports = router;

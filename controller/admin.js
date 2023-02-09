@@ -1,6 +1,9 @@
 const Charity = require('../models/charity');
 const User = require('../models/user');
 const Donation = require('../models/donation');
+const user = require('../models/user');
+const nodemailer = require('nodemailer');
+const bcrypt = require('bcrypt');
 const cloudinary = require('cloudinary').v2;
 
 cloudinary.config({
@@ -96,6 +99,12 @@ exports.adminPostEditCharity = async (req, res, next) => {
   const images = req.files;
   // console.log(target, typeof target)
   try {
+    let imgPaths = [];
+    for (let image of images) {
+      const result = await cloudinary.uploader.upload(image.path);
+      imgPaths.push(result.secure_url);
+    }
+
     const charity = await Charity.findById(id);
     if (name) {
       charity.name = name;
@@ -108,6 +117,9 @@ exports.adminPostEditCharity = async (req, res, next) => {
     }
     if (endDate) {
       charity.endDate = endDate;
+    }
+    if (images) {
+      charity.images = imgPaths;
     }
     if (target) {
       charity.target = +target;
@@ -133,11 +145,11 @@ exports.adminPostEditCharity = async (req, res, next) => {
 };
 
 exports.adminDeleteCharity = async (req, res, next) => {
-  const { charityId } = req.params;
-  // console.log(charityId)
+  const { status, charityId } = req.body;
+  // console.log(charityId, status)
   try {
     const charity = await Charity.findById(charityId);
-    charity.status = 'stopped';
+    charity.status = status;
     const response = await charity.save();
     res.status(200).json({ msg: 'Charity Delete!' });
   } catch (error) {
@@ -147,6 +159,22 @@ exports.adminDeleteCharity = async (req, res, next) => {
     return next(error);
   }
 };
+
+exports.adminDeactivateUser = async (req, res, next) => {
+  const { userId } = req.params;
+
+  try {
+    const user = await User.findById(userId);
+    user.status = 'inactive';
+    const response = await user.save();
+    res.status(200).json({ msg: 'User deactivated' });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    return next(error);
+  }
+}
 
 exports.adminFetchUsers = async (req, res, next) => {
   try {
@@ -159,6 +187,20 @@ exports.adminFetchUsers = async (req, res, next) => {
     return next(error);
   }
 };
+
+exports.adminFetchUser = async(req, res, next) => {
+  const { userId } = req.params;
+  // console.log(userId)
+  try {
+    const response = await User.findById(userId);
+    res.status(200).send(response);
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    return next(error);
+  }
+}
 
 exports.adminFetchDonations = async (req, res, next) => {
   try {
@@ -197,7 +239,7 @@ exports.adminFetchSearchedDonation = async (req, res, next) => {
 
   try {
     const donations = await Donation.find();
-    console.log(donations);
+    // console.log(donations);
     const results = donations.filter(donation => donation.user.username.includes(donorName));
     if (results) {
       res.status(200).send(results);
@@ -229,4 +271,104 @@ exports.adminFetchSearchedUser = async (req, res, next) => {
     }
     return next(error);
   }
+};
+
+exports.adminEditInfo = async (req, res, next) => {
+  const { userId, newUsername, newEmail, newStatus } = req.body;
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ msg: 'Username not found' });
+    } else {
+      if (newUsername) {
+        user.username = newUsername;
+      }
+      if (newEmail) {
+        user.email = newEmail;
+      }
+      if (newStatus) {
+        user.status = newStatus;
+      }
+      const response = await user.save();
+      res.status(200).json({ msg: 'User info updated' });
+    }
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    return next(error);
+  }
+};
+
+exports.adminForgetPassword = async (req, res, next) => {
+  const { username, email } = req.body;
+
+  try {
+    const user = await User.findOne({ username: username, email: email });
+    // console.log(user);
+    if (!user) {
+      return res.status(404).json({ msg: 'No user found' });
+    } else {
+      // Send reset password email
+      let transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: 'derp12.08@gmail.com',
+          pass: process.env.NODEMAILER_PASSWORD_GMAIL
+        }
+      });
+
+      let mailDetails = {
+        from: 'derp12.08@gmail.com',
+        to: email,
+        subject: 'RESET YOUR PASSWORD',
+        html: `
+        <h1>Hi ${user.username}</h1>
+        <br>
+        <p>Please click the link below to reset your password</p>
+        <a href='http://localhost:3000/user/reset-password/${user._id}'>Click me<a/>
+        <br>
+        <p>Best Regards,</p>
+        <p>The Giving Circle Team</p>
+        `
+      }
+
+      transporter.sendMail(mailDetails, async (err, info) => {
+        if (err) {
+          return console.log(err);
+        } else {
+          console.log('Email sent1');
+        }
+      });
+    }
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    return next(error);
+  }
+};
+
+exports.adminResetPassword = async (req, res, next) => {
+  const { newPass, confirmNewPass, userId } = req.body;
+
+  try {
+    const user = await User.findById(userId);
+    // console.log(user);
+    if (user) {
+      if (newPass !== confirmNewPass) {
+        return res.status(400).json({ msg: 'Passwords must be matched' });
+      } else {
+        const hashedPass = await bcrypt.hash(newPass, 12);
+        user.password = hashedPass;
+        const response = await user.save();
+        res.status(200).json({ msg: 'New Password Updated' });
+      }
+    }
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    return next(error);
+  } 
 }

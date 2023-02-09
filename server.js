@@ -15,6 +15,7 @@ const server = express();
 
 // Import routes
 const adminRoute = require('./routes/admin');
+const authRoute = require('./routes/auth');
 
 // morgan access log
 const accessLogStream = fs.createWriteStream(path.join(__dirname, 'access.log'), { flag: 'a' });
@@ -54,6 +55,7 @@ mongoose.set('strictQuery', false)
 
 // Using routes
 server.use('/admin', adminRoute);
+server.use(authRoute);
 
 // Handling errors
 server.use((error, req, res, next) => {
