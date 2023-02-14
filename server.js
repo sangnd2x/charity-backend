@@ -47,7 +47,7 @@ server.use(bodyParser.json());
 server.use(helmet());
 server.use(compression());
 server.use(morgan('combined', { stream: accessLogStream }));
-server.use(multer({ storage: fileStorage, fileFilter: fileFilter }).array('images'));
+server.use(multer({ storage: fileStorage, fileFilter: fileFilter }).any('images'));
 server.use('/images', express.static(path.join(__dirname, 'images')));
 
 const MONGO_URI = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.j1wx6nb.mongodb.net/${process.env.DB}`;

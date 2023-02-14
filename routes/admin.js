@@ -61,6 +61,6 @@ router.get('/users/:userId', jwtAuth, adminController.adminFetchUser);
 router.post('/user/edit-info', jwtAuth, adminController.adminEditInfo);
 
 // POST admin create new user
-router.post('/users/new-user', jwtAuth, adminController.adminCreateNewUser);
+router.post('/users/new-user', jwtAuth, adminController.adminCreateNewUser)
 
 module.exports = router;

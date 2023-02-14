@@ -138,7 +138,7 @@ exports.adminPostEditCharity = async (req, res, next) => {
     if (endDate) {
       charity.endDate = endDate;
     }
-    if (images) {
+    if (images.length > 0) {
       charity.images = imgPaths;
     }
     if (target) {
@@ -294,8 +294,14 @@ exports.adminFetchSearchedUser = async (req, res, next) => {
 };
 
 exports.adminEditInfo = async (req, res, next) => {
-  const { userId, newUsername, newEmail, newStatus } = req.body;
+  const { userId, newUsername, newEmail, newStatus, newRole } = req.body;
+  const newAvatar = req.files;
   try {
+    const imgPath = []
+    for (let newAvt of newAvatar) {
+      const result = await cloudinary.uploader.upload(newAvt.path);
+      imgPath.push(result.secure_url);
+    }
     const user = await User.findById(userId);
     if (!user) {
       res.status(404).json({ msg: 'Username not found' });
@@ -308,6 +314,12 @@ exports.adminEditInfo = async (req, res, next) => {
       }
       if (newStatus) {
         user.status = newStatus;
+      }
+      if (newRole) {
+        user.role = newRole;  
+      }
+      if (imgPath.length > 0) {
+        user.avatar = imgPath[0]
       }
       const response = await user.save();
       res.status(200).json({ msg: 'User info updated' });
