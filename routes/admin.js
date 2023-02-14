@@ -12,6 +12,9 @@ router.post('/sign-up', authController.postAdminSignUp);
 // POST admin sign in
 router.post('/sign-in', authController.postAdminSignIn);
 
+// // POST admin post images 
+// router.post('/images-upload', jwtAuth, adminController.uploadImages);
+
 // POST admin add new charity
 router.post('/new-charity', jwtAuth, adminController.postNewCharity);
 

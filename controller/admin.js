@@ -12,6 +12,24 @@ cloudinary.config({
   api_secret: process.env.API_SECRET
 });
 
+// exports.uploadImages = async (req, res, next) => {
+//   const images = req.files; 
+//   console.log(images);
+//   try {
+//     let imgPaths = [];
+//     for (let image of images) {
+//       const result = await cloudinary.uploader.upload(image.path);
+//       imgPaths.push(result.secure_url);
+//     }
+//     res.status(200).json({ imgs: imgPaths });
+//   } catch (error) {
+//     if (!error.statusCode) {
+//       error.statusCode = 500;
+//     }
+//     return next(error);
+//   }
+// }
+
 exports.postNewCharity = async (req, res, next) => {
   const { name, recipient, startDate, endDate, target, status, longDesc, shortDesc } = req.body;
   const images = req.files;
@@ -24,7 +42,7 @@ exports.postNewCharity = async (req, res, next) => {
       const result = await cloudinary.uploader.upload(image.path);
       imgPaths.push(result.secure_url);
     }
-    console.log('imgPaths', imgPaths);
+    // console.log('imgPaths', imgPaths);
     // save new charity to db
     const charity = new Charity({
       name: name,
@@ -54,23 +72,25 @@ exports.postNewCharity = async (req, res, next) => {
 
 exports.adminFetchCharities = async (req, res, next) => {
   try {
-    const response = await Charity.find();
+    const charities = await Charity.find();
     const donations = await Donation.find();
-    // const results = response.filter(res => res.status !== 'stopped');
-    const donated = response.map((charity) => {
-      const donated = []
+
+    // Return to front-end the raised amount and progress of each charity
+    const donatedCharity = charities.map(charity => {
+      const donatedAmount = []
       donations.map(donation => {
         if (donation.charity.charityName === charity.name) {
-          donated.push(+donation.amount);
+          donatedAmount.push(+donation.amount)
         }
       });
       return {
         charityName: charity.name,
-        donated: donated.reduce((a, b) => a + b, 0),
-        progress: donated.reduce((a, b) => a + b, 0)/charity.target * 100
-      }
+        donatedAmount: donatedAmount.reduce((a, b) => a + b, 0),
+        progress: donatedAmount.reduce((a, b) => a + b, 0) / +charity.target * 100
+      };
     });
-    res.status(200).json({charities: response, donated: donated});
+
+    res.status(200).json({charities: charities, donated: donatedCharity});
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
