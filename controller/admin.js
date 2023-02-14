@@ -391,4 +391,29 @@ exports.adminResetPassword = async (req, res, next) => {
     }
     return next(error);
   } 
+};
+
+exports.adminCreateNewUser = async (req, res, next) => {
+  const { username, password, email, role } = req.body;
+
+  try {
+    const hashedPass = await bcrypt.hash(password, 12);
+    const user = new User({
+      username: username,
+      password: hashedPass,
+      email: email,
+      role: role,
+      status: 'active',
+      avatar: 'https://res.cloudinary.com/dsaog9ptb/image/upload/v1675826585/male-avt_hpv8fq.png',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+    const response = await user.save();
+    res.status(200).json({ msg: 'New User Created' });
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    return next(error);
+  }
 }
